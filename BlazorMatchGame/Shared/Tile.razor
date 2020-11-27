@@ -1,0 +1,62 @@
+﻿@inject BlazorMatchGame.Services.ITileService TileService
+@implements IDisposable
+
+<div class="col-3">
+    <button class="btn btn-outline-dark" @onclick="Clicked">
+        <h1 class="@VisibleClass">@Content</h1>
+    </button>
+</div>
+
+@code {
+
+    [Parameter]
+    public string Content { get; set; }
+
+    [Parameter]
+    public int Aa { get; set; }
+
+    [Parameter]
+    public EventCallback<int> TileClick { get; set; }
+
+    private bool isVisible = false;
+    private string VisibleClass = "invisible";
+
+    private bool IsVisible
+    {
+        get
+        {
+            return isVisible;
+        }
+        set
+        {
+            if (value != isVisible)
+            {
+                isVisible = value;
+                VisibleClass = IsVisible ? "visible" : "invisible";
+            }
+        }
+    }
+
+
+    private void Clicked()
+    {
+        IsVisible = true;
+        TileClick.InvokeAsync(Aa);
+    }
+
+    protected override void OnInitialized()
+    {
+        TileService.ListChange += CheckMeInOpenList;
+    }
+
+    private void CheckMeInOpenList()
+    {
+        IsVisible = TileService.OpenTiles.Contains(Aa);
+    }
+
+    public void Dispose()
+    {
+        TileService.ListChange -= CheckMeInOpenList;
+
+    }
+}

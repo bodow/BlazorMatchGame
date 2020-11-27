@@ -1,0 +1,164 @@
+﻿@page "/blind"
+@using System.Timers;
+@inject BlazorMatchGame.Services.ITileService TileService
+
+
+<style>
+    .container {
+        width: 400px;
+    }
+
+    button {
+        width: 100px;
+        height: 100px;
+        font-size: 50px;
+    }
+
+    div.row {
+        margin-top: 30px;
+    }
+</style>
+
+<div class="container">
+    <div class="row">
+        @for (int i = 0; i < shuffledAnimals.Count; i++)
+        {
+            var animal = @shuffledAnimals[i];
+            <Tile Content="@animal" Aa="@i" TileClick="ButtonClick" />
+        }
+    </div>
+    <div class="row justify-content-center">
+        <h2>Matches found @matchesFound</h2>
+    </div>
+    <div class="row justify-content-center">
+        <h2>Time: @timeDisplay</h2>
+    </div>
+    @if (highScore < int.MaxValue)
+    {
+        <div class="row justify-content-center">
+            <h2>
+                @if (isNewHighScore)
+                {<span class="text-success">New </span>} High Score: @((highScore/10f).ToString("0.0s"))
+            </h2>
+        </div>
+    }
+</div>
+
+
+
+@code {
+    List<string> emojiSet = new List<string>()
+{
+        "🐶", "🐴", "😺", "🐮", "🦊", "🦁", "🐯", "🐹",
+        "🐵", "🐸", "🐼", "🐪", "🐐", "🦉", "🦆", "🦜"
+    };
+
+    int gamePairs = 8;
+
+    string timeDisplay = "";
+    int highScore = int.MaxValue;
+    int tenthsOfSecondElapsed = 0;
+    bool isNewHighScore = false;
+    int matchesFound;
+
+    List<string> shuffledAnimals = new List<string>();
+
+
+    Timer timer;
+    int tilePositionOpenAsfirstGuess = -1;      // not open yet
+
+    protected override void OnInitialized()
+    {
+        timer = new Timer(100);
+        timer.Elapsed += Timer_Elapsed;
+        SetupGame();
+    }
+    void SetupGame()
+    {
+        matchesFound = 0;
+        tenthsOfSecondElapsed = 0;
+        tilePositionOpenAsfirstGuess = -1;
+        Random random = new Random();
+        shuffledAnimals.Clear();
+
+        while (shuffledAnimals.Count < 2 * gamePairs)
+        {
+            int target = random.Next(0, emojiSet.Count - 1);
+            var targetEmoji = emojiSet[target];
+            if (!shuffledAnimals.Contains(targetEmoji))
+            {
+                shuffledAnimals.Add(targetEmoji);
+                shuffledAnimals.Add(targetEmoji);
+            }
+        }
+        shuffledAnimals = shuffledAnimals.OrderBy(s => random.Next()).ToList();
+        StateHasChanged();
+    }
+
+    void Timer_Elapsed(object sender, ElapsedEventArgs e)
+    {
+        InvokeAsync(() =>
+        {
+            tenthsOfSecondElapsed++;
+            timeDisplay = (tenthsOfSecondElapsed / 10f).ToString("0.0s");
+            StateHasChanged();
+        });
+    }
+
+    string lastAnimalClicked = string.Empty;
+
+    private async void ButtonClick(int pos)
+    {
+        // if it is a already opned tile, just ignore it
+        if (TileService.OpenTiles.Contains(pos))
+            return;
+
+
+        string animal = shuffledAnimals[pos];
+
+        if (tilePositionOpenAsfirstGuess < 0)
+        {
+            tilePositionOpenAsfirstGuess = pos;
+            lastAnimalClicked = animal;
+            if (!timer.Enabled)
+            {
+                // that means, this is the first movement in the game
+                isNewHighScore = false;
+                timer.Start();
+            }
+        }
+        else
+        {
+            // reject if ckicked the same as the first
+            if (pos == tilePositionOpenAsfirstGuess)
+                return;
+
+            if (lastAnimalClicked == animal)
+            {
+                // We have a match:
+                // Burn tiles
+                TileService.DoOpenTiles(new int[] { tilePositionOpenAsfirstGuess, pos });
+
+                // check if finished
+                if (++matchesFound == shuffledAnimals.Count / 2)
+                {
+                    timer.Stop();
+                    timeDisplay += " - play again?";
+                    if (tenthsOfSecondElapsed < highScore)
+                    {
+                        highScore = tenthsOfSecondElapsed;
+                        isNewHighScore = true;
+                    }
+                    SetupGame();
+                }
+            }
+            else
+            {
+                // No match: close both the tiles
+                await Task.Run(() => { System.Threading.Thread.Sleep(800); });
+                TileService.NotifyListeners();
+            }
+            tilePositionOpenAsfirstGuess = -1;
+        }
+    }
+}
