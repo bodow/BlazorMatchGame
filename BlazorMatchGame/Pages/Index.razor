@@ -1,5 +1,5 @@
 ﻿@page "/"
-@using System.Timers;  
+@using System.Timers;
 
 <style>
     .container {
@@ -11,8 +11,9 @@
         height: 100px;
         font-size: 50px;
     }
+
     div.row {
-        margin-top:40px;
+        margin-top: 30px;
     }
 </style>
 
@@ -29,34 +30,38 @@
             </div>
         }
     </div>
-    <div class="row">
+    <div class="row justify-content-center">
         <h2>Matches found @matchesFound</h2>
     </div>
-    <div class="row">
+    <div class="row justify-content-center">
         <h2>Time: @timeDisplay</h2>
     </div>
+    @if (highScore < int.MaxValue)
+    {
+        <div class="row justify-content-center">
+            <h2>@if (isNewHighScore) {<span class="text-success">New </span>} High Score: @((highScore/10f).ToString("0.0s"))</h2>
+        </div>
+    }
 </div>
 
 
 
 @code {
-    List<string> animalEmoji = new List<string>()
-    {
-        "🐶", "🐶",
-        "🐴", "🐴",
-        "😺", "😺",
-        "🐮", "🐮",
-        "🦊", "🦊",
-        "🦁", "🦁",
-        "🐯", "🐯",
-        "🐹", "🐹"
+    List<string> emojiSet = new List<string>()
+{
+        "🐶", "🐴", "😺", "🐮", "🦊", "🦁", "🐯", "🐹",
+        "🐵", "🐸", "🐼", "🐪", "🐐", "🦉", "🦆", "🦜"
     };
 
-    List<string> shuffledAnimals = new List<string>();
-    int matchesFound;
+    int gamePairs = 8;
 
     string timeDisplay = "";
+    int highScore = int.MaxValue;
     int tenthsOfSecondElapsed = 0;
+    bool isNewHighScore = false;
+    int matchesFound;
+
+    List<string> shuffledAnimals = new List<string>();
 
     Timer timer;
 
@@ -72,8 +77,21 @@
         matchesFound = 0;
         tenthsOfSecondElapsed = 0;
         Random random = new Random();
-        shuffledAnimals = animalEmoji.OrderBy(s => random.Next()).ToList();
+        shuffledAnimals.Clear();
+        while (shuffledAnimals.Count < 2 * gamePairs)
+        {
+            int target = random.Next(0, emojiSet.Count - 1);
+            var targetEmoji = emojiSet[target];
+            if (!shuffledAnimals.Contains(targetEmoji))
+            {
+                shuffledAnimals.Add(targetEmoji);
+                shuffledAnimals.Add(targetEmoji);
+            }
+        }
+        shuffledAnimals = shuffledAnimals.OrderBy(s => random.Next()).ToList();
+        StateHasChanged();
     }
+
     void Timer_Elapsed(object sender, ElapsedEventArgs e)
     {
         InvokeAsync(() =>
@@ -91,6 +109,7 @@
     {
         if (string.IsNullOrEmpty(lastAnimalClicked))
         {
+            isNewHighScore = false;
             lastAnimalClicked = animal;
             lastIndexClicked = splace;
             timer.Start();
@@ -102,10 +121,15 @@
                 // Found a match: Hide emojis
                 shuffledAnimals = shuffledAnimals.Select(a => a.Replace(animal, string.Empty)).ToList();
 
-                if (++matchesFound == animalEmoji.Count/2)
+                if (++matchesFound == shuffledAnimals.Count / 2)
                 {
                     timer.Stop();
                     timeDisplay += " - play again?";
+                    if (tenthsOfSecondElapsed < highScore)
+                    {
+                        highScore = tenthsOfSecondElapsed;
+                        isNewHighScore = true;
+                    }
                     SetupGame();
                 }
             }
