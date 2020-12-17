@@ -9,4 +9,4 @@ This is a Blazor version of the Animal Matching Game described in Andrew Stellma
 ![Game Screenshot](https://github.com/bodow/BlazorMatchGame/blob/master/BlazorMatchGame/Doc/screenshot.png?raw=true)
 
 
-This implementation was mentioned as remarkable in the ![author's blog post ](https://devblogs.microsoft.com/visualstudio/head-first-csharp-contest-got-some-truly-creative-entries/)
+This implementation was mentioned as remarkable in the [author's blog post ](https://devblogs.microsoft.com/visualstudio/head-first-csharp-contest-got-some-truly-creative-entries/)
